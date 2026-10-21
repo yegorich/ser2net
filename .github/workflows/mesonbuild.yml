@@ -1,0 +1,69 @@
+# Build and test with meson on Linux.
+name: MesonBuild
+on:
+  push:
+    branches:
+      - 'master'
+    tags:
+      - v*
+  workflow_dispatch:
+
+env:
+  INSTALLPREFIX: "_local"
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Checkout gensio
+        uses: actions/checkout@v4
+        with:
+          repository: cminyard/gensio
+          path: _gensio
+      - name: Checkout serialsim
+        uses: actions/checkout@v4
+        with:
+          repository: cminyard/serialsim
+          path: _serialsim
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkgconf swig python3-dev \
+            libssl-dev libpam0g-dev libcrypt-dev libyaml-dev libsctp-dev \
+            libopenipmi-dev openipmi openssl linux-headers-$(uname -r) \
+            linux-modules-extra-$(uname -r)
+      - name: Build gensio
+        run: |
+          cd _gensio
+          meson setup build --prefix=$GITHUB_WORKSPACE/$INSTALLPREFIX \
+            --libdir=lib -Dcplusplus=false -Dglib=disabled -Dtcl=disabled
+          ninja -C build
+          meson install -C build
+      - name: Load serialsim
+        run: |
+          make -C _serialsim
+          sudo insmod _serialsim/serialsim.ko
+          sudo modprobe sctp
+          sudo chmod 666 /dev/ttyPipe* /dev/ttyEcho*
+      - name: Configure
+        run: |
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALLPREFIX/lib/pkgconfig
+          meson setup build --prefix=$GITHUB_WORKSPACE/$INSTALLPREFIX
+      - name: Build
+        run: |
+          ninja -C build
+          meson install -C build
+      - name: Test
+        run: |
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALLPREFIX/lib
+          gensio_py=$(find $GITHUB_WORKSPACE/$INSTALLPREFIX/lib -name gensio.py)
+          export PYTHONPATH=$(dirname $gensio_py):$GITHUB_WORKSPACE/_serialsim/swig
+          meson test -C build --print-errorlogs
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meson-logs-linux
+          path: build/meson-logs
