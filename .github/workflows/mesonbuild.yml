@@ -33,8 +33,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build pkgconf swig python3-dev \
             libssl-dev libpam0g-dev libcrypt-dev libyaml-dev libsctp-dev \
-            libopenipmi-dev openipmi openssl linux-headers-$(uname -r) \
-            linux-modules-extra-$(uname -r)
+            libopenipmi-dev openipmi openssl linux-headers-$(uname -r)
+          # sctp is in here on some runner kernels, others don't have it
+          sudo apt-get install -y linux-modules-extra-$(uname -r) || true
       - name: Build gensio
         run: |
           cd _gensio
