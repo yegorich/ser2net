@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'meson-ci-test'
     tags:
       - v*
   workflow_dispatch:
