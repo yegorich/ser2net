@@ -50,7 +50,10 @@ jobs:
           make
           sudo insmod serialsim.ko
           sudo modprobe sctp
+          # Let udev finish with the new devices, or it resets the mode
+          sudo udevadm settle
           sudo chmod 666 /dev/ttyPipe* /dev/ttyEcho*
+          ls -l /dev/ttyPipe* /dev/ttyEcho*
       - name: Configure
         run: |
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALLPREFIX/lib/pkgconfig
