@@ -44,8 +44,10 @@ jobs:
           meson install -C build
       - name: Load serialsim
         run: |
-          make -C _serialsim
-          sudo insmod _serialsim/serialsim.ko
+          # The serialsim Makefile uses $(PWD), so make -C won't work
+          cd _serialsim
+          make
+          sudo insmod serialsim.ko
           sudo modprobe sctp
           sudo chmod 666 /dev/ttyPipe* /dev/ttyEcho*
       - name: Configure
